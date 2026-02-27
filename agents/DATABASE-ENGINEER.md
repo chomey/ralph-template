@@ -41,11 +41,4 @@ Schema design, migrations, ORM models, seed data, query optimization, indexing, 
 - Data integrity: constraints prevent invalid data (duplicates, orphans, nulls)
 
 ### Required Test Tiers
-**T1 (Unit + API)** — required for every `[@database]` task:
-1. Run migrations and verify the resulting schema
-2. Create, read, update, and delete records through the ORM/models
-3. Verify constraints (unique, foreign key, not null) reject invalid data
-4. Confirm seed data produces expected records
-
-**T2 (Browser integration)** — not required per-task.
-**T3 (Full E2E)** — not required per-task. Runs when triggered by milestone, `[E2E]` tag, or every 5th completed task.
+This agent requires **T1** per task. See PROMPT.md step 7 for tier definitions and T3 triggers.

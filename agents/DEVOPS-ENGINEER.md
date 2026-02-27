@@ -41,10 +41,4 @@ CI/CD pipelines, Docker configurations, deployment workflows, environment setup,
 - Rollback: previous version can be restored if deployment fails
 
 ### Required Test Tiers
-**T1 (Unit + API)** — required for every `[@devops]` task:
-1. Verify the configuration works (pipeline runs, builds succeed)
-2. Confirm health check endpoints respond correctly
-3. Test that missing/invalid configuration produces clear error messages
-
-**T2 (Browser integration)** — not required per-task.
-**T3 (Full E2E)** — not required per-task. Runs when triggered by milestone, `[E2E]` tag, or every 5th completed task.
+This agent requires **T1** per task. See PROMPT.md step 7 for tier definitions and T3 triggers.

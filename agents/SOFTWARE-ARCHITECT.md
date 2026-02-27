@@ -72,19 +72,10 @@ Add tasks to TASKS.md for infrastructure and architecture work:
 ```
 
 #### Agent Tags
-When writing tasks, tag each with the best-fit implementation agent:
-
-| Tag | Agent | Use When |
-|-----|-------|----------|
-| `[@frontend]` | Frontend Engineer | UI components, styling, responsive design, accessibility, client-side state |
-| `[@backend]` | Backend Engineer | API endpoints, business logic, middleware, server-side processing |
-| `[@database]` | Database Engineer | Schema design, migrations, ORM models, seed data, query optimization |
-| `[@devops]` | DevOps Engineer | CI/CD pipelines, Docker configs, deployment, environment setup |
-| `[@qa]` | QA Engineer | Test infrastructure, E2E tests, performance testing, test data |
-| `[@security]` | Security Engineer | Auth flows, input validation, CORS/CSRF, encryption, OWASP |
-| `[@fullstack]` | Full Stack Engineer | Cross-cutting frontend + backend, data wiring, integration |
+When writing tasks, tag each with the best-fit implementation agent from the Agent Reference table in CLAUDE.md.
 
 Task writing rules:
+- **Every task MUST have an explicit agent tag** (e.g., `[@devops]`, `[@backend]`). Tasks without a tag are invalid and Ralph will refuse to execute them.
 - Each task must be completable in a single Ralph Loop iteration
 - Infrastructure tasks should come BEFORE feature tasks that depend on them
 - But respect UI-first ordering: get a visible dev server running before deep backend work
@@ -147,7 +138,32 @@ After the user confirms their stack choices, fill in all `{{PLACEHOLDER}}` value
 - External Dependencies (with check/start commands)
 - Important Notes
 
-### Step 3: Generate Early Dependency Tasks
+### Step 3: Create Framework Skills
+Based on confirmed stack choices, create `.claude/skills/<name>/SKILL.md` files for each technology in the chosen stack. Each skill file should contain:
+
+- YAML frontmatter with `user-invocable: false` and a description containing framework keywords
+- File organization conventions for the framework
+- Key patterns and anti-patterns for the chosen version
+- 30-50 lines each, focused on preventing common mistakes
+
+**Stack-to-skill mapping:**
+
+| Stack Choice | Skill Name | Key Content |
+|---|---|---|
+| Next.js | `nextjs` | App Router, Server/Client Components, Server Actions |
+| React + Vite | `react-vite` | Component patterns, hooks, Vite config |
+| SvelteKit | `sveltekit` | File routing, load functions, form actions |
+| Express | `express` | Middleware, error handling, route patterns |
+| Fastify | `fastify` | Plugin system, schema validation, decorators |
+| Prisma | `prisma` | Schema design, migrations, relations, transactions |
+| Drizzle | `drizzle` | Schema DSL, query builder, migrations |
+| Tailwind | `tailwind` | Utility patterns, config, responsive design |
+| Playwright | `playwright` | Page objects, fixtures, assertions, screenshots |
+| Vitest | `vitest` | Config, mocking, test utilities |
+
+Only create skills for technologies actually in the chosen stack. Skills are placed in `.claude/skills/` and load automatically when Claude works with relevant code.
+
+### Step 4: Generate Early Dependency Tasks
 Generate `[@devops]` tasks for external dependency setup as the **first tasks** in TASKS.md. See "Dependency Tasks Come First" below.
 
 ### Dependency Tasks Come First

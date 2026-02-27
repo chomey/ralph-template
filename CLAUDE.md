@@ -13,13 +13,13 @@ See `PRD.md` for full product requirements.
 
 ## Project Structure
 ```
-├── CLAUDE.md              # This file - project instructions for Claude
+├── CLAUDE.md              # Project instructions for Claude
 ├── PRD.md                 # Product requirements document
-├── PROMPT.md              # Ralph Loop iteration prompt (implementation)
+├── PROMPT.md              # Ralph Loop iteration prompt
 ├── TASKS.md               # Discrete tasks to complete
 ├── PROGRESS.md            # Per-task progress log
 ├── ralph.zsh              # Ralph Loop driver script
-├── agents/                # All agent prompts (planning, implementation, review)
+├── agents/
 │   ├── PRODUCT-DESIGNER.md    # Planning: product vision, UX, feature design
 │   ├── SOFTWARE-ARCHITECT.md  # Planning: infrastructure, security, tech architecture
 │   ├── FRONTEND-ENGINEER.md   # Implementation: UI, styling, accessibility
@@ -58,7 +58,7 @@ After completing tasks, invoke the Code Reviewer to audit changes:
 ### Phase 2: Implementation (Ralph Loop with specialized agents)
 Once tasks exist in TASKS.md, **only the Ralph Loop executes them** — via `ralph.zsh` or an interactive Claude session with `"Read PROMPT.md and follow its instructions"`. No agent should implement features inline during a planning conversation.
 
-Each task is tagged with a specialized implementation agent (e.g., `[@frontend]`, `[@backend]`). Ralph loads the corresponding agent file from `agents/` for domain-specific guidance. If no tag is present, `[@fullstack]` is the default.
+Each task MUST be tagged with a specialized implementation agent (e.g., `[@frontend]`, `[@backend]`). Ralph loads the corresponding agent file from `agents/` for domain-specific guidance. Tasks without an agent tag are invalid and must not be executed.
 
 ### Agent Reference
 
@@ -101,7 +101,9 @@ When operating in Ralph Loop mode (invoked via `ralph.zsh`), follow these rules:
 1. **Read TASKS.md** to find the next unchecked task (`- [ ]`)
 2. **Read PROGRESS.md** to understand what has been done so far
 3. **Complete exactly ONE task** per iteration
-4. **Write tests (tiered by domain)** — Every task MUST include automated tests at the tiers required by its agent tag. **T1 (Unit + API)** is always required. **T2 (Browser integration)** is required for `[@frontend]`, `[@fullstack]`, and `[@qa]` tasks. **T3 (Full E2E)** runs on `[@qa]` tasks, tasks tagged `[E2E]` or `[MILESTONE]`, and automatically every 5 completed tasks. Do not mark a task complete without passing all required-tier tests.
+4. **Write tests (tiered by domain)** — See PROMPT.md step 7 for tier definitions.
+   T1 always required. T2 for `[@frontend]`/`[@fullstack]`/`[@qa]`.
+   T3 for `[@qa]`, `[E2E]`/`[MILESTONE]`, or every 5 completed tasks. Do not mark a task complete without passing all required-tier tests.
 5. **Capture screenshots** — If the project has a visual UI, automate screenshots (e.g. using Playwright, Puppeteer, or equivalent) after each task. Save screenshots to `screenshots/` and embed them in PROGRESS.md using `![description](screenshots/filename.png)`.
 6. **Mark the task as done** in TASKS.md (`- [x]`)
 7. **Log your work** in PROGRESS.md with a timestamped entry, including integration test results and any screenshots
@@ -159,32 +161,12 @@ Ralph MUST NOT directly run certain commands. These require the user to execute 
 -->
 
 ### How Ralph handles missing dependencies
-Before starting implementation on a task, Ralph MUST:
-
-1. **Determine which dependencies apply to the current task.** Each dependency has an optional `required_by` field listing task numbers that need it. If `required_by` is omitted, the dependency applies to ALL tasks. If the current task number is not in any dependency's `required_by` list, skip the check for that dependency.
-2. **Check only the applicable dependencies** by running their `check` commands
-3. If all applicable checks pass (or none apply), proceed with the task normally
-4. If ANY applicable check fails, **do NOT attempt the task**. Instead:
-   a. Print a clear `ACTION REQUIRED` block listing every failing dependency and the exact command to start it:
-      ```
-      ══════════════════════════════════════════════════
-      ACTION REQUIRED — External dependencies not running
-      ══════════════════════════════════════════════════
-
-      The following dependencies are needed for this task but are not available:
-
-      ✗ PostgreSQL (via Docker)
-        → Run: docker compose up -d db
-
-      After starting them, re-run Ralph to continue.
-      ══════════════════════════════════════════════════
-      ```
-   b. Log the blocker in PROGRESS.md under the current task
-   c. **Stop the current iteration immediately** — do NOT proceed, do NOT skip to another task
+Ralph checks applicable dependencies before each task. See dependency protocol in `.claude/skills/ralph-dependencies/`.
 
 ## Screenshots & Git LFS
 - **Git LFS is required for all image files.** Ensure `.gitattributes` tracks `*.png`, `*.jpg`, `*.jpeg`, `*.gif`, `*.webp`, and `*.svg` via Git LFS. If `.gitattributes` doesn't exist or doesn't track images, create/update it before committing any screenshots.
 - **Screenshots MUST be committed with each task** — include them in the task's commit so progress is visible in the git history.
+- **Screenshot capture is opt-in via `CAPTURE_SCREENSHOTS=1`.** The `captureScreenshot()` helper is a no-op by default. To capture screenshots during task commits, run: `CAPTURE_SCREENSHOTS=1 npx playwright test`. Plain `npx playwright test` runs tests without capturing, preventing re-runs from overwriting committed task screenshots.
 - **T3/regression QA tasks do NOT commit screenshots.** When running full T3 regression tests or QA summary tasks, just report "all tests pass" — do not duplicate screenshots that were already captured in the original task commits.
 
 ## Important Notes

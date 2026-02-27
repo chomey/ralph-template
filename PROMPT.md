@@ -31,14 +31,10 @@ Complete exactly ONE task from TASKS.md, then stop.
 
 1. **Read TASKS.md** — Find the first unchecked task (`- [ ]`). This is your task for this iteration.
 
-2. **Load Specialized Agent** — Parse the agent tag from the task (e.g., `[@frontend]`, `[@backend]`). If present, read the corresponding agent file from `agents/` (e.g., `agents/FRONTEND-ENGINEER.md`) and apply its domain-specific guidance, quality checklists, and testing expectations throughout this iteration. If no tag is present, default to `[@fullstack]` and load `agents/FULLSTACK-ENGINEER.md`. The tag-to-file mapping:
-   - `[@frontend]` → `agents/FRONTEND-ENGINEER.md`
-   - `[@backend]` → `agents/BACKEND-ENGINEER.md`
-   - `[@database]` → `agents/DATABASE-ENGINEER.md`
-   - `[@devops]` → `agents/DEVOPS-ENGINEER.md`
-   - `[@qa]` → `agents/QA-ENGINEER.md`
-   - `[@security]` → `agents/SECURITY-ENGINEER.md`
-   - `[@fullstack]` → `agents/FULLSTACK-ENGINEER.md`
+2. **Load Specialized Agent** — Parse the agent tag from the task (e.g., `[@frontend]`).
+   Read the corresponding agent file from `agents/` per the Agent Reference table in CLAUDE.md.
+   **Every task MUST have an explicit agent tag.** If a task has no `[@...]` tag, do NOT execute it — log it as invalid in PROGRESS.md and move to the next task.
+   If `.claude/skills/` contains framework-specific skills, they will load automatically when relevant to the code you're working with.
 
 3. **Read PROGRESS.md** — Understand what has already been done. Check for any notes about blockers or context from previous iterations.
 
@@ -82,7 +78,7 @@ Complete exactly ONE task from TASKS.md, then stop.
 
    Tests should cover the happy path and key edge cases. Follow the loaded agent's required test tiers.
 
-8. **Capture Screenshots** (visual products only) — If this project has a visual UI, automate screenshots using the project's screenshot tooling (e.g. Playwright, Puppeteer, or equivalent). Save screenshots to `screenshots/` with descriptive filenames like `task-[NUMBER]-[description].png`. If the project is not visual (CLI, library, API-only), skip this step. **Exception**: During T3/regression QA tasks, do NOT capture or commit new screenshots — just verify existing tests pass and report "all tests pass".
+8. **Capture Screenshots** (visual products only) — If this project has a visual UI, capture screenshots by running tests with `CAPTURE_SCREENSHOTS=1` (e.g., `CAPTURE_SCREENSHOTS=1 npx playwright test`). The `captureScreenshot()` helper is a no-op without this env var, so normal test runs won't overwrite committed screenshots. Save screenshots to `screenshots/` with descriptive filenames like `task-[NUMBER]-[description].png`. If the project is not visual (CLI, library, API-only), skip this step. **Exception**: During T3/regression QA tasks, do NOT capture or commit new screenshots — just verify existing tests pass and report "all tests pass".
 
 9. **Verify** — Run all T1 tests plus any new tests you wrote, plus build/lint. Run T2 tests only if required by the agent tag. Run T3 tests only when triggered (see step 7). All required-tier tests MUST pass before proceeding. **If tests you did NOT write are now failing**, `git stash` your changes, fix the pre-existing failure, commit the fix with `ralph: fix pre-existing test failure during task [N]`, then `git stash pop` and continue.
 

@@ -15,7 +15,7 @@
   - Order them so dependencies come first
   - Be specific about what "done" looks like
   - Include file paths or function names when relevant
-  - Tag each task with the best-fit implementation agent
+  - Every task MUST have an explicit agent tag — Ralph will skip tasks without one
 -->
 
 <!-- EXAMPLE TASKS (replace with your own — note UI-first ordering):

@@ -41,15 +41,4 @@ Test infrastructure, end-to-end testing, performance testing, test data manageme
 - Regression: existing tests continue to pass after new changes
 
 ### Required Test Tiers
-**T1 (Unit + API)** — required for every `[@qa]` task:
-1. Verify the test infrastructure itself works (test runner executes, reports results)
-2. Unit tests for test helpers, fixtures, and utilities
-
-**T2 (Browser integration)** — required for every `[@qa]` task:
-1. Render key pages/components in a browser context
-2. Capture screenshots of key visual states (if applicable)
-
-**T3 (Full E2E)** — required for every `[@qa]` task:
-1. Demonstrate at least one complete multi-step user journey passing
-2. Produce clear, readable test output
-3. QA owns E2E infrastructure — always run the full suite
+This agent requires **T1 + T2 + T3** per task. See PROMPT.md step 7 for tier definitions.

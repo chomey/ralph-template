@@ -62,19 +62,10 @@ Add new tasks to TASKS.md following this format:
 ```
 
 #### Agent Tags
-When writing tasks, tag each with the best-fit implementation agent:
-
-| Tag | Agent | Use When |
-|-----|-------|----------|
-| `[@frontend]` | Frontend Engineer | UI components, styling, responsive design, accessibility, client-side state |
-| `[@backend]` | Backend Engineer | API endpoints, business logic, middleware, server-side processing |
-| `[@database]` | Database Engineer | Schema design, migrations, ORM models, seed data, query optimization |
-| `[@devops]` | DevOps Engineer | CI/CD pipelines, Docker configs, deployment, environment setup |
-| `[@qa]` | QA Engineer | Test infrastructure, E2E tests, performance testing, test data |
-| `[@security]` | Security Engineer | Auth flows, input validation, CORS/CSRF, encryption, OWASP |
-| `[@fullstack]` | Full Stack Engineer | Cross-cutting frontend + backend, data wiring, integration |
+When writing tasks, tag each with the best-fit implementation agent from the Agent Reference table in CLAUDE.md.
 
 Task writing rules:
+- **Every task MUST have an explicit agent tag** (e.g., `[@frontend]`, `[@fullstack]`). Tasks without a tag are invalid and Ralph will refuse to execute them.
 - Each task must be completable in a single Ralph Loop iteration
 - Tasks must be ordered with dependencies first
 - Follow UI-first ordering: visible UI before backend plumbing

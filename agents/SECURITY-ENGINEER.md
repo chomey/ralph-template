@@ -46,11 +46,4 @@ Authentication flows, authorization, input validation, CORS/CSRF protection, enc
 - Rate limiting tests: verify lockout after threshold is exceeded
 
 ### Required Test Tiers
-**T1 (Unit + API)** — required for every `[@security]` task:
-1. Verify authentication works via HTTP (login, access protected resource, logout)
-2. Confirm authorization rejects unauthorized access (different roles, missing tokens)
-3. Test that malicious input is safely handled (doesn't crash, doesn't execute)
-4. Verify security headers are present on responses
-
-**T2 (Browser integration)** — not required per-task.
-**T3 (Full E2E)** — not required per-task. Runs when triggered by milestone, `[E2E]` tag, or every 5th completed task.
+This agent requires **T1** per task. See PROMPT.md step 7 for tier definitions and T3 triggers.

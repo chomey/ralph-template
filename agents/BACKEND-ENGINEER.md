@@ -41,11 +41,4 @@ API endpoints, business logic, middleware, server-side processing, request/respo
 - Error handling: verify graceful degradation when dependencies fail
 
 ### Required Test Tiers
-**T1 (Unit + API)** — required for every `[@backend]` task:
-1. Make real HTTP requests to the endpoint
-2. Verify response status codes, headers, and body structure
-3. Test both success and error paths
-4. Confirm side effects (database writes, external calls) occurred correctly
-
-**T2 (Browser integration)** — not required per-task.
-**T3 (Full E2E)** — not required per-task. Runs when triggered by milestone, `[E2E]` tag, or every 5th completed task.
+This agent requires **T1** per task. See PROMPT.md step 7 for tier definitions and T3 triggers.

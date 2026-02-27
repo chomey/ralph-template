@@ -40,13 +40,4 @@ UI components, styling, responsive design, accessibility, client-side state mana
 - Accessibility: automated a11y audits (e.g., axe-core) on key pages
 
 ### Required Test Tiers
-**T1 (Unit + API)** — required for every `[@frontend]` task:
-1. Unit tests for hooks, utilities, and pure logic functions
-2. Verify component props, state transformations, and computed values
-
-**T2 (Browser integration)** — required for every `[@frontend]` task:
-1. Render the component/page in a browser context (Playwright/Puppeteer)
-2. Verify visible text, structure, and interactive behavior (clicks, form fills)
-3. Capture a screenshot for visual verification (if the project has visual UI)
-
-**T3 (Full E2E)** — not required per-task. Runs when triggered by milestone, `[E2E]` tag, or every 5th completed task.
+This agent requires **T1 + T2** per task. See PROMPT.md step 7 for tier definitions and T3 triggers.
