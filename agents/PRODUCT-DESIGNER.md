@@ -58,13 +58,27 @@ Do NOT ask about:
 ### Step 5: Write Tasks
 Add new tasks to TASKS.md following this format:
 ```
-- [ ] Task N: Short title — Detailed description of what needs to be done, what the user should see, and what "done" looks like
+- [ ] Task N: Short title — Detailed description of what needs to be done, what the user should see, and what "done" looks like [@agent-tag]
 ```
+
+#### Agent Tags
+When writing tasks, tag each with the best-fit implementation agent:
+
+| Tag | Agent | Use When |
+|-----|-------|----------|
+| `[@frontend]` | Frontend Engineer | UI components, styling, responsive design, accessibility, client-side state |
+| `[@backend]` | Backend Engineer | API endpoints, business logic, middleware, server-side processing |
+| `[@database]` | Database Engineer | Schema design, migrations, ORM models, seed data, query optimization |
+| `[@devops]` | DevOps Engineer | CI/CD pipelines, Docker configs, deployment, environment setup |
+| `[@qa]` | QA Engineer | Test infrastructure, E2E tests, performance testing, test data |
+| `[@security]` | Security Engineer | Auth flows, input validation, CORS/CSRF, encryption, OWASP |
+| `[@fullstack]` | Full Stack Engineer | Cross-cutting frontend + backend, data wiring, integration |
 
 Task writing rules:
 - Each task must be completable in a single Ralph Loop iteration
 - Tasks must be ordered with dependencies first
 - Follow UI-first ordering: visible UI before backend plumbing
+- If your tasks require external services (database, cache, message queue, etc.), ensure `[@devops]` infrastructure tasks are ordered before any tasks that depend on them. Coordinate with the Software Architect on dependency ordering.
 - Include specific UX details: what the user sees, clicks, and experiences
 - Include acceptance criteria so Ralph knows when it's done
 - Tag infrastructure/architecture tasks with `[ARCH]` — the Software Architect will review these

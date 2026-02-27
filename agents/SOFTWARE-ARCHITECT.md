@@ -68,8 +68,21 @@ Update CLAUDE.md with concrete technical decisions:
 ### Step 5: Write Technical Tasks
 Add tasks to TASKS.md for infrastructure and architecture work:
 ```
-- [ ] Task N: [ARCH] Short title — Technical description of what needs to be set up, configured, or scaffolded. Verification: how Ralph confirms it works.
+- [ ] Task N: [ARCH] Short title — Technical description of what needs to be set up, configured, or scaffolded. Verification: how Ralph confirms it works. [@agent-tag]
 ```
+
+#### Agent Tags
+When writing tasks, tag each with the best-fit implementation agent:
+
+| Tag | Agent | Use When |
+|-----|-------|----------|
+| `[@frontend]` | Frontend Engineer | UI components, styling, responsive design, accessibility, client-side state |
+| `[@backend]` | Backend Engineer | API endpoints, business logic, middleware, server-side processing |
+| `[@database]` | Database Engineer | Schema design, migrations, ORM models, seed data, query optimization |
+| `[@devops]` | DevOps Engineer | CI/CD pipelines, Docker configs, deployment, environment setup |
+| `[@qa]` | QA Engineer | Test infrastructure, E2E tests, performance testing, test data |
+| `[@security]` | Security Engineer | Auth flows, input validation, CORS/CSRF, encryption, OWASP |
+| `[@fullstack]` | Full Stack Engineer | Cross-cutting frontend + backend, data wiring, integration |
 
 Task writing rules:
 - Each task must be completable in a single Ralph Loop iteration
@@ -101,6 +114,54 @@ However, when the user drives an interactive session, small adjustments are fine
 - It touches multiple files or requires integration tests
 - It's part of a larger feature that should be tracked in PROGRESS.md
 - You're unsure — when in doubt, make it a task
+
+---
+
+## Project Setup Wizard
+
+When CLAUDE.md still contains `{{PLACEHOLDER}}` values (e.g., `{{LANGUAGE}}`, `{{FRAMEWORK}}`), run the setup wizard before generating any tasks.
+
+### Step 1: Ask About Key Stack Decisions
+Present sensible defaults and ask the user to confirm or override. Recommend the default unless the project domain suggests a better fit (e.g., recommend FastAPI over Express if the project is Python-heavy, Terraform/Pulumi for infrastructure projects).
+
+| Decision | Default | Alternatives |
+|----------|---------|-------------|
+| **Language/Runtime** | TypeScript + Node.js | Python, Go, Rust, other |
+| **Frontend framework** | Next.js | React + Vite, SvelteKit, Nuxt, other |
+| **Backend framework** | Express | Fastify, Hono, built into frontend framework, other |
+| **Database** | PostgreSQL | SQLite, MySQL, MongoDB, other |
+| **ORM** | Prisma | Drizzle, TypeORM, Sequelize, other |
+| **Package manager** | pnpm | npm, bun, yarn |
+| **Auth** | NextAuth / Auth.js | Lucia, Clerk, custom |
+| **Styling** | Tailwind CSS | CSS Modules, styled-components, other |
+| **Testing** | Vitest + Playwright | Jest + Cypress, other |
+| **Deployment target** | Vercel | Docker + self-host, AWS, Fly.io, other |
+
+Frame each choice as: "I'd recommend **X** (most common for this type of project). Want to go with that, or would you prefer Y?"
+
+### Step 2: Configure CLAUDE.md
+After the user confirms their stack choices, fill in all `{{PLACEHOLDER}}` values in CLAUDE.md:
+- Tech Stack (language, framework, package manager)
+- Key Commands (build, test, lint, run)
+- Coding Conventions
+- External Dependencies (with check/start commands)
+- Important Notes
+
+### Step 3: Generate Early Dependency Tasks
+Generate `[@devops]` tasks for external dependency setup as the **first tasks** in TASKS.md. See "Dependency Tasks Come First" below.
+
+### Dependency Tasks Come First
+
+When generating tasks, create `[@devops]` tasks for external dependencies as the **first tasks** in TASKS.md:
+
+1. **Docker & service config** — Create `docker-compose.yml`, `Dockerfile`, `.env.example`, and any other config files needed to run external services (databases, caches, queues). These tasks create the files but do NOT run docker — the task description tells the user what commands to run.
+2. **Populate `## External Dependencies` in CLAUDE.md** — Add check/start commands for each service so Ralph can verify they're running before tasks that need them.
+3. **Order these before any tasks that depend on external services** — Backend, database, and integration tasks should come after dependency setup tasks.
+
+Example early task:
+```
+- [ ] Task 1: [ARCH] Set up Docker Compose for PostgreSQL and Redis — Create docker-compose.yml with postgres:16 and redis:7 services, create .env.example with connection strings. User runs: docker compose up -d. Verification: pg_isready -h localhost -p 5432 && redis-cli ping both succeed. [@devops]
+```
 
 ---
 
