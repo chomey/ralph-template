@@ -414,6 +414,9 @@ esac
 
 # Run Claude for each task
 for ((i = 1; i <= TASK_COUNT; i++)); do
+  # Bail out if interrupted between iterations
+  [[ $INTERRUPTED -eq 1 ]] && { print_summary; exit 130; }
+
   ITER_START=$(date +%s)
 
   # Snapshot which tasks are checked before Claude runs
@@ -450,6 +453,17 @@ for ((i = 1; i <= TASK_COUNT; i++)); do
   local claude_exit=0
   claude --print --dangerously-skip-permissions --model "$model" "$prompt" || claude_exit=$?
 
+  # If interrupted (Ctrl+C), exit immediately — don't retry
+  if [[ $INTERRUPTED -eq 1 || $claude_exit -eq 130 ]]; then
+    INTERRUPTED=1
+    ITER_TIMES+=($(($(date +%s) - ITER_START)))
+    ITER_MODELS+=("$model")
+    ITER_TAGS+=("$task_tag")
+    ITER_TITLES+=("${task_title} ${YELLOW}(interrupted)${NC}")
+    print_summary
+    exit 130
+  fi
+
   # Check if Claude failed
   if [[ $claude_exit -ne 0 ]]; then
     print ""
@@ -459,6 +473,11 @@ for ((i = 1; i <= TASK_COUNT; i++)); do
     print "${YELLOW}  Retrying in 5 seconds...${NC}"
     sleep 5
     claude --print --dangerously-skip-permissions --model "$model" "$prompt" || {
+      # Check again for interrupt during retry
+      if [[ $INTERRUPTED -eq 1 ]]; then
+        print_summary
+        exit 130
+      fi
       print "${RED}  ✗ Retry also failed. Stopping loop.${NC}"
       TASKS_FAILED_THIS_RUN=$((TASKS_FAILED_THIS_RUN + 1))
       ITER_TIMES+=($(($(date +%s) - ITER_START)))
