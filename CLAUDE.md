@@ -77,7 +77,14 @@ Each task MUST be tagged with a specialized implementation agent (e.g., `[@front
 ```
 - [ ] Task N: Short title — Description [@agent-tag]
 - [ ] Task N: [ARCH] Short title — Description [@devops]
+- [ ] Task N: [OPUS] Complex title — Description [@fullstack]
 ```
+
+### Model Tags
+Tasks are run with Sonnet by default for speed. Add these tags to force Opus for complex tasks:
+- `[MILESTONE]` — Major integration milestones (auto-detected by ralph.zsh)
+- `[E2E]` — End-to-end test tasks (auto-detected)
+- `[OPUS]` — Manually tagged complex tasks requiring deeper reasoning (cross-file audits, multi-system changes, architectural work)
 
 ### The Rule
 **Prefer tasks for all meaningful work.** New features, multi-file changes, and anything that needs integration tests should be a task in TASKS.md and implemented by Ralph. Small bug fixes, config tweaks, and quick adjustments can be done inline when the user drives an interactive session.
@@ -98,20 +105,21 @@ Each task MUST be tagged with a specialized implementation agent (e.g., `[@front
 ## Ralph Loop Instructions
 When operating in Ralph Loop mode (invoked via `ralph.zsh`), follow these rules:
 
-1. **Read TASKS.md** to find the next unchecked task (`- [ ]`)
-2. **Read PROGRESS.md** to understand what has been done so far
+1. **Find your task** — Search TASKS.md for the first unchecked task (`- [ ]`). Read only that task, not the full file.
+2. **Skim PROGRESS.md** — Read the last ~5 entries for recent context. Older entries are in PROGRESS-ARCHIVE.md.
 3. **Complete exactly ONE task** per iteration
 4. **Write tests (tiered by domain)** — See PROMPT.md step 7 for tier definitions.
    T1 always required. T2 for `[@frontend]`/`[@fullstack]`/`[@qa]`.
    T3 for `[@qa]`, `[E2E]`/`[MILESTONE]`, or every 5 completed tasks. Do not mark a task complete without passing all required-tier tests.
-5. **Capture screenshots** — If the project has a visual UI, automate screenshots (e.g. using Playwright, Puppeteer, or equivalent) after each task. Save screenshots to `screenshots/` and embed them in PROGRESS.md using `![description](screenshots/filename.png)`.
+5. **Capture screenshots** — If the project has a visual UI, capture screenshots during the test run (not separately). Use `CAPTURE_SCREENSHOTS=1 CAPTURE_TASK=<N>` env vars to scope captures to the current task. Save to `screenshots/` and embed in PROGRESS.md.
 6. **Mark the task as done** in TASKS.md (`- [x]`)
-7. **Log your work** in PROGRESS.md with a timestamped entry, including integration test results and any screenshots
+7. **Log your work** in PROGRESS.md — keep entries brief (see PROMPT.md step 10 for format)
 8. **Run tests/build** after each change to verify nothing is broken. Run all T1 tests plus any new tests you wrote. Run T2 tests only if the agent tag requires it (`[@frontend]`, `[@fullstack]`, `[@qa]`). Run T3 tests only when triggered (every 5 completed tasks, `[E2E]`/`[MILESTONE]` tags, or `[@qa]` tasks). All required-tier tests MUST pass. **If tests you did NOT write are now failing**, `git stash` your changes, fix the pre-existing failure, commit the fix with `ralph: fix pre-existing test failure during task [N]`, then `git stash pop` and continue.
 9. **Commit your changes** with a descriptive message referencing the task
-10. Do NOT skip ahead or do multiple tasks at once
-11. **NEVER modify completed (`- [x]`) or in-progress tasks in TASKS.md.** Only unchecked/unstarted tasks (`- [ ]`) may be edited, reordered, or removed. Completed and in-progress tasks are immutable records.
-12. If a task is blocked, note it in PROGRESS.md and move to the next unblocked task
+10. **Print a structured summary** to stdout after committing (see PROMPT.md step 12)
+11. Do NOT skip ahead or do multiple tasks at once
+12. **NEVER modify completed (`- [x]`) or in-progress tasks in TASKS.md.** Only unchecked/unstarted tasks (`- [ ]`) may be edited, reordered, or removed. Completed and in-progress tasks are immutable records.
+13. If a task is blocked, note it in PROGRESS.md and move to the next unblocked task
 
 ## Task Ordering: Dependencies First, Then UI-First
 When generating or ordering tasks in TASKS.md, **set up external dependencies early** and then **prioritize getting a visible, working UI as soon as possible** so that progress is verifiable by human eyes. Follow this order:
@@ -166,7 +174,7 @@ Ralph checks applicable dependencies before each task. See dependency protocol i
 ## Screenshots & Git LFS
 - **Git LFS is required for all image files.** Ensure `.gitattributes` tracks `*.png`, `*.jpg`, `*.jpeg`, `*.gif`, `*.webp`, and `*.svg` via Git LFS. If `.gitattributes` doesn't exist or doesn't track images, create/update it before committing any screenshots.
 - **Screenshots MUST be committed with each task** — include them in the task's commit so progress is visible in the git history.
-- **Screenshot capture is opt-in via `CAPTURE_SCREENSHOTS=1`.** The `captureScreenshot()` helper is a no-op by default. To capture screenshots during task commits, run: `CAPTURE_SCREENSHOTS=1 npx playwright test`. Plain `npx playwright test` runs tests without capturing, preventing re-runs from overwriting committed task screenshots.
+- **Screenshot capture is opt-in via env vars.** Set `CAPTURE_SCREENSHOTS=1` to enable capture. Set `CAPTURE_TASK=<N>` to scope captures to a specific task number — this prevents running the full test suite from overwriting screenshots from other tasks. Without these env vars, `captureScreenshot()` is a no-op.
 - **T3/regression QA tasks do NOT commit screenshots.** When running full T3 regression tests or QA summary tasks, just report "all tests pass" — do not duplicate screenshots that were already captured in the original task commits.
 
 ## Important Notes
