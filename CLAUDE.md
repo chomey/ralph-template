@@ -74,10 +74,9 @@ Each task MUST be tagged with a specialized implementation agent (e.g., `[@front
 | `[@reviewer]` | `agents/CODE-REVIEWER.md` | Post-implementation review and audit |
 
 ### Task Format
+TASKS.md holds the full backlog of upcoming tasks. Ralph treats it as a **mutex**: pick up the first unchecked task, complete it, then stop. Only one task is in-progress at a time. Ralph stops when there are no unchecked tasks.
 ```
 - [ ] Task N: Short title — Description [@agent-tag]
-- [ ] Task N: [ARCH] Short title — Description [@devops]
-- [ ] Task N: [OPUS] Complex title — Description [@fullstack]
 ```
 
 ### Model Tags
@@ -106,14 +105,14 @@ Tasks are run with Sonnet by default for speed. Add these tags to force Opus for
 When operating in Ralph Loop mode (invoked via `ralph.zsh`), follow these rules:
 
 1. **Find your task** — Search TASKS.md for the first unchecked task (`- [ ]`). Read only that task, not the full file.
-2. **Skim PROGRESS.md** — Read the last ~5 entries for recent context. Older entries are in PROGRESS-ARCHIVE.md.
+2. **Read PROGRESS.md** — It acts as a mutex with only one task entry at a time. Completed entries are archived to PROGRESS-ARCHIVE.md.
 3. **Complete exactly ONE task** per iteration
 4. **Write tests (tiered by domain)** — See PROMPT.md step 7 for tier definitions.
    T1 always required. T2 for `[@frontend]`/`[@fullstack]`/`[@qa]`.
    T3 for `[@qa]`, `[E2E]`/`[MILESTONE]`, or every 5 completed tasks. Do not mark a task complete without passing all required-tier tests.
 5. **Capture screenshots** — If the project has a visual UI, capture screenshots during the test run (not separately). Use `CAPTURE_SCREENSHOTS=1 CAPTURE_TASK=<N>` env vars to scope captures to the current task. Save to `screenshots/` and embed in PROGRESS.md.
 6. **Mark the task as done** in TASKS.md (`- [x]`)
-7. **Log your work** in PROGRESS.md — keep entries brief (see PROMPT.md step 10 for format)
+7. **Log your work** in PROGRESS.md — first archive any existing entry to PROGRESS-ARCHIVE.md, then write a single entry for the current task. PROGRESS.md should only ever contain ONE task entry. Keep entries brief (see PROMPT.md step 10 for format)
 8. **Run tests/build** after each change to verify nothing is broken. Run all T1 tests plus any new tests you wrote. Run T2 tests only if the agent tag requires it (`[@frontend]`, `[@fullstack]`, `[@qa]`). Run T3 tests only when triggered (every 5 completed tasks, `[E2E]`/`[MILESTONE]` tags, or `[@qa]` tasks). All required-tier tests MUST pass. **If tests you did NOT write are now failing**, `git stash` your changes, fix the pre-existing failure, commit the fix with `ralph: fix pre-existing test failure during task [N]`, then `git stash pop` and continue.
 9. **Commit your changes** with a descriptive message referencing the task
 10. **Print a structured summary** to stdout after committing (see PROMPT.md step 12)
