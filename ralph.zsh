@@ -312,7 +312,7 @@ START_TIME=$(date +%s)
 START_TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
 print "${BLUE}╔══════════════════════════════════════╗${NC}"
-print "${BLUE}║       🚌 Ralph Loop v2.0 🚌          ║${NC}"
+print "${BLUE}║     🚌 Ralph Loop v3.0 (worktree) 🚌  ║${NC}"
 print "${BLUE}║  \"I'm helping!\" - Ralph Wiggum       ║${NC}"
 print "${BLUE}╚══════════════════════════════════════╝${NC}"
 print ""
@@ -382,11 +382,11 @@ print "${BLUE}━━━━━━━━━━━━━━━━━━━━━━
 print ""
 
 # Extract next N uncompleted tasks
-grep '^\- \[ \]' "$TASKS_FILE" | head -n "$TASK_COUNT" | while IFS= read -r task; do
+grep '^\- \[ \]' "$TASKS_FILE" | sort -t' ' -k4 -n | head -n "$TASK_COUNT" | while IFS= read -r task; do
   local title=$(extract_task_title "$task")
   local tag=$(extract_agent_tag "$task")
   local model_hint=""
-  if echo "$task" | grep -qiE '\[MILESTONE\]|\[E2E\]|\[OPUS\]'; then
+  if echo "$task" | grep -qiE '\[OPUS\]|\[MATH\]'; then
     model_hint=" ${MAGENTA}opus${NC}"
   else
     model_hint=" ${CYAN}sonnet${NC}"
@@ -412,7 +412,47 @@ case "$confirm" in
     ;;
 esac
 
-# Run Claude for each task
+# Worktree base directory (sibling to the repo)
+WORKTREE_BASE="${SCRIPT_DIR}/.worktrees"
+MAIN_BRANCH=$(git -C "$SCRIPT_DIR" rev-parse --abbrev-ref HEAD)
+
+# Pull latest from remote before starting
+print "${DIM}Pulling latest from origin/${MAIN_BRANCH}...${NC}"
+git -C "$SCRIPT_DIR" pull --rebase origin "$MAIN_BRANCH" 2>/dev/null || true
+
+# cleanup_worktree — removes a worktree and its branch
+cleanup_worktree() {
+  local wt_path="$1" branch_name="$2"
+  if [[ -d "$wt_path" ]]; then
+    git -C "$SCRIPT_DIR" worktree remove --force "$wt_path" 2>/dev/null || rm -rf "$wt_path"
+  fi
+  git -C "$SCRIPT_DIR" branch -D "$branch_name" 2>/dev/null || true
+}
+
+# ─── Cleanup leftover worktrees/branches from previous failed runs ──────────
+git -C "$SCRIPT_DIR" worktree prune 2>/dev/null || true
+if [[ -d "$WORKTREE_BASE" ]]; then
+  for wt_dir in "$WORKTREE_BASE"/task-*(N); do
+    [[ -d "$wt_dir" ]] || continue
+    local leftover_num
+    leftover_num=$(basename "$wt_dir" | sed 's/task-//')
+    local leftover_branch="ralph/task-${leftover_num}"
+    print "${DIM}  Cleaning up leftover worktree: ${wt_dir}${NC}"
+    cleanup_worktree "$wt_dir" "$leftover_branch"
+  done
+fi
+# Also clean any orphaned ralph/* branches with no matching worktree
+for orphan_branch in $(git -C "$SCRIPT_DIR" branch --list 'ralph/task-*' 2>/dev/null | sed 's/^[* ]*//' ); do
+  local orphan_num
+  orphan_num=$(echo "$orphan_branch" | sed 's|ralph/task-||')
+  local orphan_wt="${WORKTREE_BASE}/task-${orphan_num}"
+  if [[ ! -d "$orphan_wt" ]]; then
+    print "${DIM}  Cleaning up orphaned branch: ${orphan_branch}${NC}"
+    git -C "$SCRIPT_DIR" branch -D "$orphan_branch" 2>/dev/null || true
+  fi
+done
+
+# Run Claude for each task (in isolated worktrees)
 for ((i = 1; i <= TASK_COUNT; i++)); do
   # Bail out if interrupted between iterations
   [[ $INTERRUPTED -eq 1 ]] && { print_summary; exit 130; }
@@ -425,9 +465,14 @@ for ((i = 1; i <= TASK_COUNT; i++)); do
   before_completed=${before_completed:-0}
 
   # Get current task info
-  next_task=$(grep '^\- \[ \]' "$TASKS_FILE" | head -n 1)
+  next_task=$(grep '^\- \[ \]' "$TASKS_FILE" | sort -t' ' -k4 -n | head -n 1)
   task_title=$(extract_task_title "$next_task")
   task_tag=$(extract_agent_tag "$next_task")
+
+  # Extract task number for branch naming (head -1: only the FIRST "Task NNN", not references to other tasks)
+  local task_num
+  task_num=$(echo "$next_task" | grep -oE 'Task [0-9]+' | head -1 | grep -oE '[0-9]+')
+  task_num=${task_num:-$i}
 
   print ""
   print "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -436,26 +481,82 @@ for ((i = 1; i <= TASK_COUNT; i++)); do
   print "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
   print ""
 
-  # Build the prompt from PROMPT.md
-  prompt=$(cat "$PROMPT_FILE")
+  # ─── Worktree setup ──────────────────────────────────────────────────────
+  local branch_name="ralph/task-${task_num}"
+  local wt_path="${WORKTREE_BASE}/task-${task_num}"
 
-  # Pick model: Opus for MILESTONE/E2E/complex tasks, Sonnet for everything else
-  if echo "$next_task" | grep -qiE '\[MILESTONE\]|\[E2E\]|\[OPUS\]'; then
+  # Clean up any leftover worktree from a previous failed run
+  cleanup_worktree "$wt_path" "$branch_name"
+
+  mkdir -p "$WORKTREE_BASE"
+  print "  ${DIM}▸ Creating worktree: ${wt_path}${NC}"
+  local wt_create_exit=0
+  git -C "$SCRIPT_DIR" worktree add -b "$branch_name" "$wt_path" "$MAIN_BRANCH" 2>&1 || wt_create_exit=$?
+  if [[ $wt_create_exit -ne 0 ]]; then
+    print "${RED}  ✗ Failed to create worktree for ${branch_name}. Attempting cleanup and retry...${NC}"
+    cleanup_worktree "$wt_path" "$branch_name"
+    git -C "$SCRIPT_DIR" worktree prune 2>/dev/null || true
+    git -C "$SCRIPT_DIR" worktree add -b "$branch_name" "$wt_path" "$MAIN_BRANCH" 2>&1 || {
+      print "${RED}  ✗ Retry failed. Stopping loop.${NC}"
+      TASKS_FAILED_THIS_RUN=$((TASKS_FAILED_THIS_RUN + 1))
+      ITER_TIMES+=($(($(date +%s) - ITER_START)))
+      ITER_MODELS+=("unknown")
+      ITER_TAGS+=("$task_tag")
+      ITER_TITLES+=("${task_title} ${RED}(worktree failed)${NC}")
+      break
+    }
+  fi
+
+  # Build the prompt from PROMPT.md (read from worktree copy)
+  local wt_prompt_file="${wt_path}/PROMPT.md"
+  prompt=$(cat "$wt_prompt_file")
+
+  # Pick model: Opus for tasks needing deep reasoning, Sonnet for everything else
+  if echo "$next_task" | grep -qiE '\[OPUS\]|\[MATH\]'; then
     model="opus"
-    print "  ${MAGENTA}▸ Model: opus${NC} ${DIM}(milestone/complex task)${NC}"
+    local tag_reason="complex"
+    echo "$next_task" | grep -qiE '\[MATH\]' && tag_reason="math-heavy"
+    print "  ${MAGENTA}▸ Model: opus${NC} ${DIM}(${tag_reason} task)${NC}"
   else
     model="sonnet"
     print "  ${CYAN}▸ Model: sonnet${NC}"
   fi
   print ""
 
-  # Run Claude with the prompt, passing project context via CLAUDE.md
+  # Run Claude inside the worktree (45-minute timeout per task)
   local claude_exit=0
-  claude --print --dangerously-skip-permissions --model "$model" "$prompt" || claude_exit=$?
+  local TASK_TIMEOUT=2700  # 45 minutes
+  local claude_pid
+  (cd "$wt_path" && claude --print --dangerously-skip-permissions --model "$model" "$prompt") &
+  claude_pid=$!
 
-  # If interrupted (Ctrl+C), exit immediately — don't retry
+  # Monitor with timeout — check every 10 seconds
+  local elapsed=0
+  while kill -0 "$claude_pid" 2>/dev/null; do
+    if [[ $elapsed -ge $TASK_TIMEOUT ]]; then
+      print ""
+      print "${RED}  ✗ Task timed out after $((TASK_TIMEOUT / 60)) minutes. Killing...${NC}"
+      kill -TERM "$claude_pid" 2>/dev/null
+      sleep 2
+      kill -9 "$claude_pid" 2>/dev/null || true
+      wait "$claude_pid" 2>/dev/null || true
+      TASKS_FAILED_THIS_RUN=$((TASKS_FAILED_THIS_RUN + 1))
+      ITER_TIMES+=($(($(date +%s) - ITER_START)))
+      ITER_MODELS+=("$model")
+      ITER_TAGS+=("$task_tag")
+      ITER_TITLES+=("${task_title} ${RED}(timed out)${NC}")
+      cleanup_worktree "$wt_path" "$branch_name"
+      continue 2  # continue outer for loop
+    fi
+    sleep 10
+    elapsed=$((elapsed + 10))
+  done
+  wait "$claude_pid" 2>/dev/null || claude_exit=$?
+
+  # If interrupted (Ctrl+C), clean up worktree and exit
   if [[ $INTERRUPTED -eq 1 || $claude_exit -eq 130 ]]; then
     INTERRUPTED=1
+    cleanup_worktree "$wt_path" "$branch_name"
     ITER_TIMES+=($(($(date +%s) - ITER_START)))
     ITER_MODELS+=("$model")
     ITER_TAGS+=("$task_tag")
@@ -472,9 +573,10 @@ for ((i = 1; i <= TASK_COUNT; i++)); do
     # Retry once for transient failures
     print "${YELLOW}  Retrying in 5 seconds...${NC}"
     sleep 5
-    claude --print --dangerously-skip-permissions --model "$model" "$prompt" || {
+    (cd "$wt_path" && claude --print --dangerously-skip-permissions --model "$model" "$prompt") || {
       # Check again for interrupt during retry
       if [[ $INTERRUPTED -eq 1 ]]; then
+        cleanup_worktree "$wt_path" "$branch_name"
         print_summary
         exit 130
       fi
@@ -484,17 +586,20 @@ for ((i = 1; i <= TASK_COUNT; i++)); do
       ITER_MODELS+=("$model")
       ITER_TAGS+=("$task_tag")
       ITER_TITLES+=("${task_title} ${RED}(FAILED)${NC}")
+      cleanup_worktree "$wt_path" "$branch_name"
       print_summary
       exit 1
     }
   fi
 
-  # Detect stuck task: if the same task is still unchecked, warn
-  local after_completed
-  after_completed=$(grep -c '^\- \[x\]' "$TASKS_FILE" 2>/dev/null || true)
-  after_completed=${after_completed:-0}
+  # ─── Merge worktree back to main branch ────────────────────────────────
+  # Check if the worktree branch has any commits beyond main
+  local wt_tasks_file="${wt_path}/TASKS.md"
+  local wt_after_completed
+  wt_after_completed=$(grep -c '^\- \[x\]' "$wt_tasks_file" 2>/dev/null || true)
+  wt_after_completed=${wt_after_completed:-0}
 
-  if [[ "$after_completed" -le "$before_completed" ]]; then
+  if [[ "$wt_after_completed" -le "$before_completed" ]]; then
     print ""
     print "${RED}  ⚠ Warning: Task may not have been marked complete!${NC}"
     print "${RED}    '${task_title}' is still unchecked in TASKS.md${NC}"
@@ -504,9 +609,74 @@ for ((i = 1; i <= TASK_COUNT; i++)); do
     TASKS_COMPLETED_THIS_RUN=$((TASKS_COMPLETED_THIS_RUN + 1))
   fi
 
-  # Auto-archive if files have grown too large
-  archive_progress
-  archive_tasks
+  # Merge the worktree branch into main
+  local has_new_commits
+  has_new_commits=$(git -C "$SCRIPT_DIR" log "${MAIN_BRANCH}..${branch_name}" --oneline 2>/dev/null | head -1)
+
+  if [[ -n "$has_new_commits" ]]; then
+    print ""
+    print "  ${DIM}▸ Merging ${branch_name} → ${MAIN_BRANCH}${NC}"
+
+    # Stash any uncommitted local changes on main before merging
+    local did_stash=0
+    local stash_output
+    stash_output=$(git -C "$SCRIPT_DIR" stash push -u -m "ralph: auto-stash before merging ${branch_name}" 2>&1)
+    if [[ "$stash_output" != *"No local changes"* ]]; then
+      did_stash=1
+      print "  ${DIM}▸ Stashed local changes${NC}"
+    fi
+
+    local merge_exit=0
+    git -C "$SCRIPT_DIR" merge "$branch_name" --no-edit || merge_exit=$?
+
+    if [[ $merge_exit -ne 0 ]]; then
+      print "${RED}  ✗ Merge conflict! Aborting merge.${NC}"
+      git -C "$SCRIPT_DIR" merge --abort 2>/dev/null || true
+      # Restore stash before bailing
+      if [[ $did_stash -eq 1 ]]; then
+        git -C "$SCRIPT_DIR" stash pop 2>/dev/null || true
+        print "  ${DIM}▸ Restored stashed changes${NC}"
+      fi
+      print "${RED}  Worktree preserved at: ${wt_path}${NC}"
+      print "${YELLOW}    Resolve manually: cd ${SCRIPT_DIR} && git merge ${branch_name}${NC}"
+      TASKS_FAILED_THIS_RUN=$((TASKS_FAILED_THIS_RUN + 1))
+      ITER_TIMES+=($(($(date +%s) - ITER_START)))
+      ITER_MODELS+=("$model")
+      ITER_TAGS+=("$task_tag")
+      ITER_TITLES+=("${task_title} ${RED}(merge conflict)${NC}")
+      print_summary
+      exit 1
+    fi
+    print "  ${GREEN}▸ Merged successfully${NC}"
+
+    # Restore stashed changes on top of the merge
+    if [[ $did_stash -eq 1 ]]; then
+      if git -C "$SCRIPT_DIR" stash pop 2>&1; then
+        print "  ${DIM}▸ Restored stashed changes${NC}"
+      else
+        # Stash pop conflict — resolve by accepting merged version and dropping stash
+        print "${YELLOW}  ⚠ Stash pop had conflicts — accepting merged versions${NC}"
+        git -C "$SCRIPT_DIR" checkout --theirs . 2>/dev/null || true
+        git -C "$SCRIPT_DIR" reset HEAD 2>/dev/null || true
+        git -C "$SCRIPT_DIR" stash drop 2>/dev/null || true
+      fi
+    fi
+  else
+    print "  ${DIM}▸ No new commits on ${branch_name}, skipping merge${NC}"
+  fi
+
+  # Clean up worktree
+  cleanup_worktree "$wt_path" "$branch_name"
+
+  # Auto-archive if files have grown too large (non-fatal)
+  archive_progress || print "${YELLOW}  ⚠ archive_progress failed (non-fatal)${NC}"
+  archive_tasks || print "${YELLOW}  ⚠ archive_tasks failed (non-fatal)${NC}"
+
+  # Commit archive changes so they don't cause stash conflicts on next iteration
+  if ! git -C "$SCRIPT_DIR" diff --quiet PROGRESS.md PROGRESS-ARCHIVE.md TASKS.md TASKS-ARCHIVE.md 2>/dev/null; then
+    git -C "$SCRIPT_DIR" add PROGRESS.md PROGRESS-ARCHIVE.md TASKS.md TASKS-ARCHIVE.md 2>/dev/null
+    git -C "$SCRIPT_DIR" commit -m "ralph: archive old progress/task entries" --no-verify 2>/dev/null || true
+  fi
 
   # Iteration timing
   ITER_END=$(date +%s)
@@ -538,6 +708,11 @@ for ((i = 1; i <= TASK_COUNT; i++)); do
     sleep 2
   fi
 done
+
+# ─── Clean up worktree directory if empty ──────────────────────────────────
+if [[ -d "$WORKTREE_BASE" ]] && [[ -z "$(ls -A "$WORKTREE_BASE" 2>/dev/null)" ]]; then
+  rmdir "$WORKTREE_BASE" 2>/dev/null || true
+fi
 
 # ─── Final summary ──────────────────────────────────────────────────────────
 print_summary

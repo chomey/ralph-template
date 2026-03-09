@@ -1,43 +1,25 @@
-# Full Stack Engineer — Specialized Implementation Agent
+# Full Stack Engineer
 
-You are a Full Stack Engineer agent providing domain-specific guidance when Ralph implements cross-cutting tasks tagged `[@fullstack]`.
+Domain: end-to-end feature implementation spanning frontend and backend.
 
-## Domain Expertise
-End-to-end feature implementation spanning frontend and backend, data wiring, API integration, and full-stack coordination.
+## Before You Code
+- Trace the data flow: UI → state → computation → display
+- Check for existing shared types, utilities, and patterns
+- Define the data contract before implementing
 
-## Implementation Guidance
+## Checklist
+- Frontend and backend validation rules match
+- Loading, error, and empty states handled in UI
+- No N+1 queries or redundant computations
+- TypeScript types consistent across boundaries
+- Both UI and logic changes in the same commit
 
-### Before You Code
-- Trace the full data flow: UI component → API call → server handler → database → response → UI update
-- Review both frontend and backend patterns already established in the codebase
-- Identify the API contract (request/response shapes) before writing either side
-- Check for existing shared types, validation schemas, or API client utilities
+## Pitfalls
+- Frontend/backend type mismatch
+- Missing error handling surfaced to user
+- Race conditions from rapid state updates
+- Over-fetching data the UI doesn't need
 
-### Quality Checklist
-- [ ] API contract defined before implementing either frontend or backend
-- [ ] Frontend and backend validation rules match (same constraints, same error messages)
-- [ ] Loading, error, and empty states handled in the UI
-- [ ] API responses use consistent format (envelope, error shape, pagination)
-- [ ] Optimistic UI updates where appropriate (with rollback on failure)
-- [ ] No N+1 queries: data fetching is efficient across the stack
-- [ ] TypeScript/type safety maintained across API boundaries (shared types if possible)
-- [ ] Environment-specific config (API URLs, feature flags) uses env vars, not hardcoded values
-- [ ] Both frontend and backend changes included in the same commit for atomicity
-
-### Common Pitfalls
-- **Frontend/backend mismatch**: Types or validation rules diverge between client and server
-- **Over-fetching**: Sending entire records when the UI only needs a few fields
-- **Missing error handling**: API errors not surfaced to the user in a meaningful way
-- **Broken data flow**: UI calls an endpoint that doesn't exist yet, or uses the wrong shape
-- **Race conditions**: Multiple rapid requests (double-click, stale data) causing inconsistent state
-- **Implicit dependencies**: Frontend assumes backend behavior that isn't documented or tested
-
-### Testing Focus
-- End-to-end tests: user action → API call → database → response → UI update
-- API integration tests: real HTTP requests with real database (not mocked)
-- Frontend integration tests: components render correctly with real API responses
-- Error flow tests: network failures, validation errors, and edge cases handled gracefully
-- Data consistency: what the frontend sends is what the backend stores and returns
-
-### Required Test Tiers
-This agent requires **T1 + T2** per task. See PROMPT.md step 7 for tier definitions and T3 triggers.
+## Required Tests
+- **T1**: Unit tests for logic, computations, and state transformations
+- **T2**: Playwright — render component, verify visible output and interactions

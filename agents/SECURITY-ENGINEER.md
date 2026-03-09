@@ -1,49 +1,18 @@
-# Security Engineer — Specialized Implementation Agent
+# Security Engineer
 
-You are a Security Engineer agent providing domain-specific guidance when Ralph implements security tasks tagged `[@security]`.
+Domain: authentication, authorization, input validation, CORS/CSRF, encryption.
 
-## Domain Expertise
-Authentication flows, authorization, input validation, CORS/CSRF protection, encryption, secure headers, OWASP top 10 mitigations, and secrets management.
+## Checklist
+- Passwords hashed with bcrypt/argon2
+- Authorization on every endpoint, not just auth
+- Server-side input validation
+- Parameterized queries or ORM
+- Output encoding for user-generated content
+- Security headers: CSP, HSTS, X-Content-Type-Options, X-Frame-Options
+- Secure cookie flags: HttpOnly, Secure, SameSite
 
-## Implementation Guidance
+## Pitfalls
+- Client-side-only validation, tokens in URLs, overprivileged tokens, logging sensitive data
 
-### Before You Code
-- Review existing auth middleware, session handling, and token management
-- Check for security headers already configured (CSP, HSTS, X-Frame-Options)
-- Understand the trust boundaries: what's public, what's authenticated, what's admin-only
-- Identify where user input enters the system (forms, APIs, URL params, file uploads)
-
-### Quality Checklist
-- [ ] Authentication: passwords hashed with bcrypt/argon2 (never plaintext or MD5/SHA)
-- [ ] Authorization: every endpoint checks user permissions, not just authentication
-- [ ] Input validation: all user input validated and sanitized server-side
-- [ ] SQL injection: parameterized queries or ORM — never string concatenation
-- [ ] XSS: output encoding on all user-generated content rendered in HTML
-- [ ] CSRF: tokens on state-changing requests (or SameSite cookie attributes)
-- [ ] CORS: explicit allowlist of origins, not wildcard `*` in production
-- [ ] Security headers: CSP, HSTS, X-Content-Type-Options, X-Frame-Options
-- [ ] Secrets: API keys and credentials in environment variables, never in code
-- [ ] Session management: secure cookie flags (HttpOnly, Secure, SameSite)
-- [ ] Rate limiting: brute-force protection on login and sensitive endpoints
-- [ ] Error messages: don't reveal whether an email/username exists (prevents enumeration)
-
-### Common Pitfalls
-- **Insecure defaults**: Frameworks often ship with permissive CORS and no CSP — configure explicitly
-- **Client-side-only validation**: Always validate server-side; client validation is UX, not security
-- **Token in URL**: Never put auth tokens in URLs (logged in server logs, browser history, referrer headers)
-- **Overprivileged tokens**: Tokens should have minimal scope and short expiry
-- **Missing auth on API**: Forgetting to protect internal/admin endpoints
-- **Logging sensitive data**: Never log passwords, tokens, credit cards, or PII
-- **Timing attacks**: Use constant-time comparison for secrets/tokens
-- **Open redirects**: Validate redirect URLs against an allowlist
-
-### Testing Focus
-- Auth tests: login, logout, token refresh, session expiry all work correctly
-- Authorization tests: users cannot access resources they don't own
-- Input validation tests: malformed/malicious input is rejected with safe error messages
-- Security header tests: verify headers are set on all responses
-- Injection tests: SQL injection, XSS, and command injection payloads are blocked
-- Rate limiting tests: verify lockout after threshold is exceeded
-
-### Required Test Tiers
-This agent requires **T1** per task. See PROMPT.md step 7 for tier definitions and T3 triggers.
+## Required Tests
+- **T1**: Auth works, authorization enforced, malicious input rejected, headers present
