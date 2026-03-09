@@ -654,9 +654,10 @@ for ((i = 1; i <= TASK_COUNT; i++)); do
       if git -C "$SCRIPT_DIR" stash pop 2>&1; then
         print "  ${DIM}▸ Restored stashed changes${NC}"
       else
-        # Stash pop conflict — resolve by accepting merged version and dropping stash
-        print "${YELLOW}  ⚠ Stash pop had conflicts — accepting merged versions${NC}"
-        git -C "$SCRIPT_DIR" checkout --theirs . 2>/dev/null || true
+        # Stash pop conflict — keep the merge result (--ours), discard stash
+        print "${YELLOW}  ⚠ Stash pop had conflicts — keeping merge result${NC}"
+        git -C "$SCRIPT_DIR" checkout --ours . 2>/dev/null || true
+        git -C "$SCRIPT_DIR" add -A 2>/dev/null || true
         git -C "$SCRIPT_DIR" reset HEAD 2>/dev/null || true
         git -C "$SCRIPT_DIR" stash drop 2>/dev/null || true
       fi
